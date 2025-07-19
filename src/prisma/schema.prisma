@@ -1,0 +1,192 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Account {
+  id              String        @id @default(uuid())
+  name            String?
+  email           String        @unique
+  password        String
+  role            Role          @default(USER)
+  status          Status        @default(ACTIVE)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Agent-specific fields
+  code            String?       @unique
+  walletBalance   Float?
+  salesCount      Int?
+
+  services        Service[]
+  tickets         Ticket[]      @relation("UserTickets")
+  ticketReplies   TicketReply[]
+  transactions    Transaction[]
+  assignedTickets Ticket[]      @relation("AssignedTickets")
+
+  @@map("accounts")
+}
+
+model Server {
+  id              String    @id @default(uuid())
+  name            String
+  panelType       PanelType
+  panelUrl        String?
+  panelUser       String?
+  panelPass       String?
+  status          Status    @default(OFFLINE)
+  onlineUsers     Int       @default(0)
+
+  plans           Plan[]
+  services        Service[]
+
+  @@map("servers")
+}
+
+model Category {
+  id              String  @id @default(uuid())
+  name            String
+  status          Status  @default(ACTIVE)
+  
+  plans           Plan[]
+
+  @@map("categories")
+}
+
+model Plan {
+  id               String   @id @default(uuid())
+  name             String
+  price            Float
+  durationDays     Int
+  volumeGB         Float?
+  postPurchaseInfo String?
+  inboundId        String?
+  status           Status   @default(ACTIVE)
+
+  domain           String?
+  port             String?
+  protocol         String?
+  networkType      String?
+  security         String?
+
+  categoryId       String
+  category         Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  serverId         String
+  server           Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  services         Service[]
+
+  @@map("plans")
+}
+
+model Service {
+  id              String    @id @default(uuid())
+  clientEmail     String
+  clientUUID      String?
+  status          Status
+  expiresAt       DateTime
+  inboundId       String?
+  createdAt       DateTime  @default(now())
+
+  userId          String
+  user            Account   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  planId          String
+  plan            Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  
+  serverId        String
+  server          Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  
+  categoryId      String
+  
+  transaction     Transaction?
+
+  @@map("services")
+}
+
+model Ticket {
+  id          String         @id @default(uuid())
+  subject     String
+  status      TicketStatus   @default(OPEN)
+  priority    TicketPriority @default(LOW)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  userId      String
+  user        Account        @relation("UserTickets", fields: [userId], references: [id], onDelete: Cascade)
+
+  assignedToId String?
+  assignedTo  Account?       @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  
+  replies     TicketReply[]
+
+  @@map("tickets")
+}
+
+model TicketReply {
+  id        String   @id @default(uuid())
+  message   String
+  createdAt DateTime @default(now())
+
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  authorId  String
+  author    Account  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("ticket_replies")
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  amount      Float
+  description String
+  createdAt   DateTime @default(now())
+
+  userId      String
+  user        Account  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  serviceId   String   @unique
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+enum Role {
+  USER
+  AGENT
+  ADMIN
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  ONLINE
+  OFFLINE
+}
+
+enum PanelType {
+  ALIREZA_XUI
+  OTHER
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+}

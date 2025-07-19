@@ -1,0 +1,8 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYDIR=/home/YOUR_CPANEL_USERNAME/repositories/YOUR_APP_DIRECTORY
+    - /bin/cp -R * $DEPLOYDIR
+    - /bin/cp .env $DEPLOYDIR
+    - /bin/bash /home/YOUR_CPANEL_USERNAME/bin/npm_install.sh
+    - /bin/bash /home/YOUR_CPANEL_USERNAME/bin/npm_build.sh
